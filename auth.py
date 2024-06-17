@@ -1,7 +1,7 @@
 import requests
 
 # Load your TMDB API key
-TMDB_API_KEY = 'b7dd5b6043a6d8305da50c741b003070'
+TMDB_API_KEY = 'key'
 
 # Step 1: Create a request token
 def create_request_token(api_key):
