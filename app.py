@@ -101,7 +101,7 @@ async def manage_movies(ctx, action: str, *, movie_name_or_url: str = None):
             }
 
             # Create an embed message
-            embed = discord.Embed(title=movie_details['title'], description=movie_details['overview'], url=f"{TMDB_URL}/movie/{movie['id']}")
+            embed = discord.Embed(title=movie_details['title'], description=movie_details['overview'], url=f"https://www.themoviedb.org/movie/{movie['id']}")
             embed.set_image(url=f"{TMDB_IMAGE_URL}{movie['poster_path']}")
             embed.add_field(name="Release Date", value=movie_details['release_date'], inline=True)
             embed.add_field(name="Rating", value=movie_details['vote_average'], inline=True)
