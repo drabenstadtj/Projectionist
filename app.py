@@ -213,7 +213,7 @@ async def manage_movies(ctx, action: str, *, movie_name_or_url: str = None):
                 await asyncio.sleep(spin_speed)
             
             chosen_movie = random.choice(movies_from_tmdb)
-            embed = discord.Embed(title=chosen_movie['title'], description=chosen_movie['overview'], url=f"{TMDB_URL}/movie/{chosen_movie['id']}")
+            embed = discord.Embed(title=chosen_movie['title'], description=chosen_movie['overview'], url=f"https://www.themoviedb.org/movie/{movie['id']}")
             embed.set_image(url=f"{TMDB_IMAGE_URL}{chosen_movie['poster_path']}")
             embed.add_field(name="Release Date", value=chosen_movie['release_date'], inline=True)
             embed.add_field(name="Rating", value=chosen_movie['vote_average'], inline=True)
