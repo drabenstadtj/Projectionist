@@ -38,19 +38,28 @@ async def on_ready():
     logger.info(f'Logged in as {bot.user}')
 
 def fetch_tmdb_list():
-    url = f"{TMDB_URL}/list/{TMDB_LIST_ID}?language=en-US&page=1"
-    headers = {
-        "accept": "application/json",
-        "Authorization": f"Bearer {TMDB_TOKEN}"
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        logger.info("Fetched TMDB list successfully.")
-        return data['items']
-    else:
-        logger.error(f"Failed to fetch TMDB list: {response.status_code} - {response.text}")
-        return []
+    page = 1
+    total_pages = 1
+    all_items = []
+
+    while page <= total_pages:
+        url = f"{TMDB_URL}/list/{TMDB_LIST_ID}?language=en-US&page={page}"
+        headers = {
+            "accept": "application/json",
+            "Authorization": f"Bearer {TMDB_TOKEN}"
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            total_pages = data.get('total_pages', 1)
+            all_items.extend(data.get('items', []))
+            logger.info(f"Fetched page {page} of {total_pages} successfully.")
+            page += 1
+        else:
+            logger.error(f"Failed to fetch TMDB list: {response.status_code} - {response.text}")
+            break
+
+    return all_items
 
 def get_movie_details(movie_id):
     url = f"{TMDB_URL}/movie/{movie_id}?language=en-US&api_key={TMDB_KEY}"
