@@ -209,7 +209,7 @@ async def manage_movies(ctx, action: str, *, movie_name_or_url: str = None):
     elif action == 'spin':
         logger.info("Spinning the wheel to choose a random movie.")
         movies_from_tmdb = fetch_tmdb_list()
-        logger.info("TMDB List: ", movies_from_tmdb)
+        
         if movies_from_tmdb:
             emojis = ["🟥", "🟨", "🟩", "🟦"]
             spin_duration = .5  # seconds
