@@ -1,6 +1,6 @@
-# Movie Wheel Bot
+# Projectionist
 
-Movie Wheel Bot is a Discord bot that helps manage a movie watchlist for your Discord server. You can add, remove, and randomly select movies from your watchlist, all while keeping track of your favorite films. The bot interacts with The Movie Database (TMDB) to fetch and manage movie details.
+Projectionist is a Discord bot that helps manage a movie watchlist for your Discord server. You can add, remove, and randomly select movies from your watchlist, all while keeping track of your favorite films. The bot interacts with The Movie Database (TMDB) to fetch and manage movie details.
 
 ## Features
 
