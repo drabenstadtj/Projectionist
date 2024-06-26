@@ -1,7 +1,7 @@
 import requests
 
 # Load your TMDB API key
-TMDB_API_KEY = 'key'
+TMDB_API_KEY = '12be26a1cc506fa6487b0f7813e14c8b'
 
 # Step 1: Create a request token
 def create_request_token(api_key):
@@ -43,7 +43,7 @@ def create_session_id(api_key, request_token):
 
 if __name__ == "__main__":
     # Replace with your TMDB API key
-    api_key = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiN2RkNWI2MDQzYTZkODMwNWRhNTBjNzQxYjAwMzA3MCIsInN1YiI6IjY2NzA0ODU2ZjE4MmU0MTlkYmQxZTJlZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.m76_yMYHuhFdL_FxD39PrnFO62Z0yy1ZOjlGxdephuY'
+    api_key = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIxMmJlMjZhMWNjNTA2ZmE2NDg3YjBmNzgxM2UxNGM4YiIsInN1YiI6IjY2NzA0ODU2ZjE4MmU0MTlkYmQxZTJlZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.cPWRSue4_VYHNwNy_jIoWA-Ebx79KJXYppFMqZcLEOo'
     
     # Step 1: Create a request token
     request_token = create_request_token(api_key)
