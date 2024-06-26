@@ -5,6 +5,7 @@ import asyncio
 import logging
 import discord
 from discord.ext import commands
+from discord.ui import Button, View
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -48,11 +49,11 @@ def create_session_id(request_token):
         'request_token': request_token
     }
     response = requests.post(url, headers=headers, json=data)
-    if response.status_code == 200:
-        return response.json().get('session_id')
-    else:
-        logger.error(f"Failed to create session ID: {response.status_code} - {response.text}")
-        return None
+    try:
+        return response.json()
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode session ID response: {response.text}")
+        return {"error": "Invalid response"}
 
 class Authorization(commands.Cog):
     def __init__(self, bot):
@@ -60,31 +61,48 @@ class Authorization(commands.Cog):
 
     @commands.command(name='authorize')
     async def authorize(self, ctx):
+        logger.info("Starting authorization process...")
         request_token = create_request_token()
         if request_token:
+            user = ctx.message.author
+            logger.info(f"Request token created: {request_token}")
+            dm_channel = await user.create_dm()
             auth_url = f"https://www.themoviedb.org/authenticate/{request_token}"
-            link_message = await ctx.send(f"Please visit this URL to authorize the request token: {auth_url}")
-            confirmation_message = await ctx.send("After authorization, react to this message with ✅ to complete the process.")
-            await confirmation_message.add_reaction('✅')
 
-            def check(reaction, user):
-                return user == ctx.message.author and str(reaction.emoji) == '✅' and reaction.message.id == confirmation_message.id
+            # Create the view with buttons
+            view = View()
+            view.add_item(Button(label="Authorize", url=auth_url, style=discord.ButtonStyle.link))
+            authorize_button = Button(label="I have authorized", style=discord.ButtonStyle.green)
+            view.add_item(authorize_button)
 
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=600.0, check=check)  # Wait for up to 10 minutes
-                session_id = create_session_id(request_token)
-                if session_id:
+            async def button_callback(interaction):
+                if interaction.user != user:
+                    await interaction.response.send_message("You cannot use this button.", ephemeral=True)
+                    return
+                await interaction.response.send_message("Checking authorization status...", ephemeral=True)
+                
+                session_id_response = create_session_id(request_token)
+                if 'session_id' in session_id_response:
+                    session_id = session_id_response['session_id']
                     save_session_id(session_id)
-                    await ctx.send("Authorization complete! Your session ID has been saved securely.")
-                    await confirmation_message.clear_reaction('✅')
-                    await link_message.delete()
-                    await confirmation_message.delete()
+                    await dm_channel.send("Authorization complete! Your session ID has been saved securely.")
+                    logger.info("Session ID created and saved.")
+                elif session_id_response.get('status_code') != 17:
+                    await dm_channel.send("An error occurred while creating the session ID. Please try again.")
+                    logger.error(f"Failed to create session ID: {session_id_response}")
                 else:
-                    await ctx.send("Failed to create session ID. Please try again.")
-            except asyncio.TimeoutError:
-                await ctx.send("Authorization timed out. Please try again.")
+                    await dm_channel.send("Authorization timed out. Please try again.")
+                    logger.warning("Authorization timed out.")
+
+            authorize_button.callback = button_callback
+
+            await dm_channel.send(
+                f"Please visit this URL to authorize the request token: {auth_url}",
+                view=view
+            )
         else:
-            await ctx.send("Failed to create request token. Please try again.")
+            logger.error("Failed to create request token.")
+            await ctx.message.author.send("Failed to create request token. Please try again.")
 
 async def setup(bot):
     await bot.add_cog(Authorization(bot))

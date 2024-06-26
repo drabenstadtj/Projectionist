@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import requests
 import logging
@@ -8,28 +9,53 @@ from discord.ext import commands
 from .checks import is_authorized  # Ensure the correct import path
 
 TMDB_API_KEY = os.getenv('TMDB_KEY')
-TMDB_SESSION_ID = os.getenv('TMDB_SESSION_ID')
 TMDB_TOKEN = os.getenv('TMDB_TOKEN')
 TMDB_LIST_ID = '8303899'
 TMDB_URL = "https://api.themoviedb.org/3"
 TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/original"
 
+SESSION_FILE = 'tmdb_session.json'
+
 logger = logging.getLogger(__name__)
 
+def load_session_id():
+    if os.path.exists(SESSION_FILE):
+        with open(SESSION_FILE, 'r') as f:
+            data = json.load(f)
+            return data.get('session_id')
+    return None
+
 def fetch_tmdb_list():
-    url = f"{TMDB_URL}/list/{TMDB_LIST_ID}?language=en-US&page=1"
+    session_id = load_session_id()
+    url = f"{TMDB_URL}/list/{TMDB_LIST_ID}"
     headers = {
         "accept": "application/json",
         "Authorization": f"Bearer {TMDB_TOKEN}"
     }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        logger.info("Fetched TMDB list successfully.")
-        return data['items']
-    else:
+
+    # Initial request to get the total number of pages
+    response = requests.get(url, headers=headers, params={"session_id": session_id, "language": "en-US", "page": 1})
+    
+    if response.status_code != 200:
         logger.error(f"Failed to fetch TMDB list: {response.status_code} - {response.text}")
         return []
+
+    data = response.json()
+    total_pages = data['total_pages']
+    all_items = data['items']
+
+    # Iterate through remaining pages
+    for page in range(2, total_pages + 1):
+        response = requests.get(url, headers=headers, params={"session_id": session_id, "language": "en-US", "page": page})
+        if response.status_code == 200:
+            data = response.json()
+            all_items.extend(data['items'])
+        else:
+            logger.error(f"Failed to fetch TMDB list on page {page}: {response.status_code} - {response.text}")
+            break
+
+    logger.info("Fetched all pages of TMDB list successfully.")
+    return all_items
 
 def get_movie_details(movie_id):
     url = f"{TMDB_URL}/movie/{movie_id}?language=en-US&api_key={TMDB_API_KEY}"
@@ -50,7 +76,7 @@ class MovieCommands(commands.Cog):
             raise commands.CheckFailure("You need to authorize first using `!authorize`.")
         return True
 
-    @commands.command(name='mw')
+    @commands.command(name='p')
     async def manage_movies(self, ctx, action: str, *, movie_name_or_url: str = None):
         if action == 'add' and movie_name_or_url:
             await self.add_movie(ctx, movie_name_or_url)
@@ -117,13 +143,13 @@ class MovieCommands(commands.Cog):
             try:
                 reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
                 if str(reaction.emoji) == '✅':
-                    await ctx.send(f"Adding movie: {movie_details['title']}")
-
-                    watchlist_url = f"{TMDB_URL}/list/{TMDB_LIST_ID}/add_item?session_id={TMDB_SESSION_ID}"
+                    watchlist_url = f"{TMDB_URL}/list/{TMDB_LIST_ID}/add_item"
+                    session_id = load_session_id()
                     # Add the movie to the TMDB watchlist
                     payload = {
                         "media_type": "movie",
-                        "media_id": movie['id']
+                        "media_id": movie['id'],
+                        "session_id": session_id
                     }
                     headers = {
                         "accept": "application/json",
@@ -133,6 +159,7 @@ class MovieCommands(commands.Cog):
                     watchlist_response = requests.post(watchlist_url, json=payload, headers=headers)
                     if watchlist_response.status_code == 201:
                         logger.info(f"Successfully added movie to TMDB watchlist: {movie_details['title']}")
+                        await ctx.send(f"Added movie: {movie_details['title']}")
                     elif watchlist_response.status_code == 403:
                         error_data = watchlist_response.json()
                         if error_data.get('status_code') == 8:
@@ -179,13 +206,14 @@ class MovieCommands(commands.Cog):
             if movie_id_to_remove:
                 # Remove the movie from the TMDB list
                 url = f"{TMDB_URL}/list/{TMDB_LIST_ID}/remove_item"
-                payload = { "media_id": movie_id_to_remove }
+                session_id = load_session_id()
+                payload = { "media_id": movie_id_to_remove, "session_id": session_id }
                 headers = {
                     "accept": "application/json",
                     "content-type": "application/json",
                     "Authorization": f"Bearer {TMDB_TOKEN}"
                 }
-                response = requests.post(url, json=payload, headers=headers, params={"session_id": TMDB_SESSION_ID})
+                response = requests.post(url, json=payload, headers=headers)
                 
                 if response.status_code == 200:
                     await ctx.send(f"Removed movie: {movie_name_or_url}")
